@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>剩菜魔法食堂 Fridge Magician</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --magic-purple:#6366f1;
+    --magic-purple-dark:#4338ca;
+    --food-yellow:#f59e0b;
+    --food-yellow-light:#fde68a;
+    --bg-cream:#fffaf0;
+    --ink:#1e1b3a;
+  }
+  body{
+    font-family:'Noto Sans TC','Baloo 2',sans-serif;
+    background-color: var(--bg-cream);
+    background-image:
+      radial-gradient(circle at 10% 10%, rgba(99,102,241,0.10), transparent 35%),
+      radial-gradient(circle at 90% 20%, rgba(245,158,11,0.12), transparent 35%),
+      radial-gradient(circle at 50% 90%, rgba(99,102,241,0.08), transparent 40%);
+    color: var(--ink);
+  }
+  .font-display{ font-family:'Baloo 2', sans-serif; }
+
+  .ingredient-card{
+    transition: transform .15s ease, box-shadow .15s ease, background-color .15s ease;
+    box-shadow: 0 2px 0 rgba(30,27,58,0.08);
+  }
+  .ingredient-card:hover{ transform: translateY(-2px); }
+  input[type=checkbox]:checked + .ingredient-card{
+    background: linear-gradient(135deg, var(--magic-purple), #8385f5);
+    color: white;
+    transform: translateY(-3px) rotate(-1deg);
+    box-shadow: 0 6px 14px rgba(99,102,241,0.35);
+  }
+  input[type=checkbox]:checked + .ingredient-card .ing-emoji{
+    transform: scale(1.15) rotate(8deg);
+  }
+  .ing-emoji{ transition: transform .15s ease; }
+
+  .magic-btn{
+    background: linear-gradient(135deg, var(--magic-purple) 0%, #8385f5 50%, var(--food-yellow) 100%);
+    box-shadow: 0 8px 0 var(--magic-purple-dark), 0 12px 20px rgba(99,102,241,0.4);
+    transition: transform .08s ease, box-shadow .08s ease;
+  }
+  .magic-btn:active{
+    transform: translateY(6px);
+    box-shadow: 0 2px 0 var(--magic-purple-dark), 0 4px 10px rgba(99,102,241,0.4);
+  }
+  .magic-btn.shaking{
+    animation: shake .5s infinite;
+  }
+  @keyframes shake{
+    0%,100%{ transform: rotate(0deg) translateX(0); }
+    20%{ transform: rotate(-3deg) translateX(-3px); }
+    40%{ transform: rotate(3deg) translateX(3px); }
+    60%{ transform: rotate(-2deg) translateX(-2px); }
+    80%{ transform: rotate(2deg) translateX(2px); }
+  }
+
+  .slot-reel{
+    height: 3.2rem;
+    overflow:hidden;
+    position:relative;
+  }
+  .slot-reel-inner{
+    animation: spin-reel .12s linear infinite;
+  }
+  @keyframes spin-reel{
+    0%{ transform: translateY(0); }
+    100%{ transform: translateY(-3.2rem); }
+  }
+
+  .recipe-card{
+    transition: transform .2s ease, box-shadow .2s ease;
+    opacity:0; transform: translateY(14px) scale(.97);
+    animation: rise .45s ease forwards;
+  }
+  .recipe-card:hover{ transform: translateY(-4px); box-shadow: 0 14px 24px rgba(30,27,58,0.12); }
+  @keyframes rise{
+    to{ opacity:1; transform: translateY(0) scale(1); }
+  }
+
+  .tab-btn{ transition: all .2s ease; }
+  .tab-btn.active-minimalist{
+    background: var(--ink); color:#fff;
+  }
+  .tab-btn.active-premium{
+    background: linear-gradient(135deg, var(--food-yellow), #fbbf24); color:#3b2a06;
+  }
+
+  .sparkle{ position:absolute; pointer-events:none; font-size:1.4rem; animation: float-up 1.2s ease-out forwards; }
+  @keyframes float-up{
+    0%{ opacity:1; transform: translateY(0) scale(0.6); }
+    100%{ opacity:0; transform: translateY(-60px) scale(1.3) rotate(25deg); }
+  }
+
+  .category-pill{ border-bottom: 3px solid transparent; }
+
+  ::-webkit-scrollbar{ height:6px; width:6px; }
+  ::-webkit-scrollbar-thumb{ background: var(--magic-purple); border-radius:4px; }
+
+  .wobble-hover:hover{ animation: wobble 0.5s ease; }
+  @keyframes wobble{
+    0%,100%{ transform: rotate(0); }
+    25%{ transform: rotate(-4deg); }
+    75%{ transform: rotate(4deg); }
+  }
+</style>
+</head>
+<body class="min-h-screen pb-24">
+
+<!-- Header -->
+<header class="relative overflow-hidden text-white" style="background: linear-gradient(120deg, var(--magic-purple-dark), var(--magic-purple) 60%, #8385f5);">
+  <div class="absolute -top-10 -left-10 w-56 h-56 rounded-full bg-white opacity-10"></div>
+  <div class="absolute top-10 right-10 w-24 h-24 rounded-full bg-yellow-300 opacity-20 wobble-hover"></div>
+  <div class="max-w-5xl mx-auto px-6 py-10 relative z-10 text-center">
+    <h1 class="font-display text-4xl sm:text-5xl font-extrabold tracking-tight drop-shadow-sm">
+      🪄 剩菜魔法食堂 <span class="block sm:inline text-2xl sm:text-3xl font-bold opacity-90">Fridge Magician</span>
+    </h1>
+    <p class="mt-3 text-lg sm:text-xl font-medium" style="color: var(--food-yellow-light);">專治看著冰箱發呆的你</p>
+  </div>
+</header>
+
+<main class="max-w-5xl mx-auto px-4 sm:px-6 -mt-6 relative z-10">
+
+  <!-- Ingredient Selection -->
+  <section class="bg-white rounded-3xl shadow-xl p-5 sm:p-8 mt-4">
+    <div class="flex items-center justify-between flex-wrap gap-2 mb-5">
+      <h2 class="font-display text-xl sm:text-2xl font-bold" style="color: var(--magic-purple-dark);">
+        🧺 打開冰箱，勾出你擁有的食材
+      </h2>
+      <button id="clearBtn" class="text-sm font-bold px-3 py-1.5 rounded-full border-2" style="border-color: var(--magic-purple); color: var(--magic-purple);">
+        清空重選
+      </button>
+    </div>
+    <div id="ingredientGroups" class="space-y-6"></div>
+  </section>
+
+  <!-- Magic Button Area -->
+  <section class="flex flex-col items-center my-10 relative">
+    <button id="magicBtn" class="magic-btn font-display text-2xl sm:text-3xl font-extrabold text-white px-10 sm:px-14 py-5 rounded-full select-none relative">
+      施展魔法 🪄
+    </button>
+    <p id="selectedCount" class="mt-3 text-sm font-semibold" style="color: var(--magic-purple-dark);">目前選了 0 種食材</p>
+
+    <!-- Slot machine overlay -->
+    <div id="slotOverlay" class="hidden mt-6 w-full max-w-md bg-white rounded-2xl shadow-2xl border-4 p-4" style="border-color: var(--food-yellow);">
+      <div class="slot-reel rounded-xl bg-gray-900 flex items-center justify-center">
+        <div class="slot-reel-inner flex flex-col items-center text-4xl">
+          <span class="py-2">🍳</span><span class="py-2">🍜</span><span class="py-2">🥘</span><span class="py-2">🍞</span><span class="py-2">🧀</span><span class="py-2">🍳</span>
+        </div>
+      </div>
+      <p class="text-center mt-3 font-display font-bold" style="color: var(--magic-purple-dark);">咒語施放中… 正在翻遍你的冰箱！</p>
+    </div>
+  </section>
+
+  <!-- Recipe Display -->
+  <section class="mt-4">
+    <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+      <h2 id="recipeSectionTitle" class="font-display text-xl sm:text-2xl font-bold" style="color: var(--magic-purple-dark);">
+        ✨ 主廚精選招牌料理
+      </h2>
+      <div id="tabBar" class="hidden gap-2">
+        <button id="tabMinimalist" class="tab-btn font-display font-bold px-4 py-2 rounded-full bg-gray-100 text-sm sm:text-base">
+          地獄極簡風 ⚡️
+        </button>
+        <button id="tabPremium" class="tab-btn font-display font-bold px-4 py-2 rounded-full bg-gray-100 text-sm sm:text-base">
+          偽高級餐廳風 👑
+        </button>
+      </div>
+    </div>
+    <p id="emptyState" class="hidden text-center text-gray-500 font-medium py-10">
+      😅 冰箱裡的食材組合不出魔法食譜，試試多勾幾項，或換個搭配吧！
+    </p>
+    <div id="recipeGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+  </section>
+
+</main>
+
+<footer class="text-center text-xs text-gray-400 mt-16 pb-6">
+  剩菜魔法食堂 © 願你的冰箱永遠不再發呆
+</footer>
+
+<script>
+/* ===================== 資料：食材 ===================== */
+const ingredientGroupsData = [
+  { title: "主食類 🍚", items: ["冷飯","麵條","吐司","水餃皮","泡麵"], emojiMap: {"冷飯":"🍚","麵條":"🍜","吐司":"🍞","水餃皮":"🥟","泡麵":"🍥"} },
+  { title: "蔬菜類 🥬", items: ["高麗菜","洋蔥","番茄","青蔥"], emojiMap: {"高麗菜":"🥬","洋蔥":"🧅","番茄":"🍅","青蔥":"🌱"} },
+  { title: "蛋白質與加工品類 🍳", items: ["雞蛋","豆腐","培根","火腿","火鍋料","起司"], emojiMap: {"雞蛋":"🥚","豆腐":"🧈","培根":"🥓","火腿":"🍖","火鍋料":"🍢","起司":"🧀"} },
+  { title: "醬料與其他 🌶️", items: ["咖哩","沙茶醬","韓式辣醬","維力炸醬"], emojiMap: {"咖哩":"🍛","沙茶醬":"🥄","韓式辣醬":"🌶️","維力炸醬":"🫙"} },
+];
+
+/* ===================== 資料：食譜 ===================== */
+const recipes = [
+  // ==========================================
+  // 1. 水餃皮、冷飯、麵條、吐司、泡麵主食系列 (1-15)
+  // ==========================================
+  { 
+    id: 1, name: "香脆水餃皮餅乾", style: "minimalist", ingredients: ["水餃皮"], time: "3分鐘", 
+    desc: "水餃皮雙面刷點油，撒上胡椒鹽，進烤箱或平底鍋煎到兩面金黃酥脆！", 
+    instructions: ["將水餃皮平鋪在烤盤或大盤子上。", "兩面刷上薄薄的食用油，均勻撒上胡椒鹽、椒鹽粉或辣椒粉。", "放入預熱 180°C 的烤箱烘烤 3 分鐘，或直接放平底鍋乾煎至雙面起泡、呈金黃脆餅狀即可。"] 
+  },
+  { 
+    id: 2, name: "水餃皮起司脆餅", style: "minimalist", ingredients: ["水餃皮", "起司"], time: "5分鐘", 
+    desc: "兩片水餃皮中間夾一片起司，壓緊邊緣下鍋煎到起司融化、外皮酥脆。", 
+    instructions: ["拿出一片水餃皮，正中間放上一片起司（折小塊，邊緣留空）。", "蓋上第二片水餃皮，用手指用力壓緊四周邊緣（沾一點點水能黏得更牢）。", "平底鍋下少許油，用中小火將兩面煎到金黃酥脆、內餡起司融化牽絲即可。"] 
+  },
+  { 
+    id: 3, name: "水餃皮蛋餅", style: "minimalist", ingredients: ["水餃皮", "雞蛋"], time: "5分鐘", 
+    desc: "三片水餃皮稍微重疊壓平當作蛋餅皮，下鍋煎熟後倒入蛋液反轉煎熟。", 
+    instructions: ["將 3-4 片水餃皮稍微重疊排成一個大圓形，用擀麵棍或玻璃杯稍微壓緊成一張大蛋餅皮。", "平底鍋熱油，將水餃餅皮下鍋煎至兩面半透明微焦，起鍋備用。", "打一顆蛋倒入鍋中，立刻蓋上剛剛的水餃餅皮，壓一壓讓蛋與餅皮黏合，蛋熟後捲起來切塊即完成！"] 
+  },
+  { 
+    id: 4, name: "水餃皮迷你披薩", style: "premium", ingredients: ["水餃皮", "起司", "火腿"], time: "7分鐘", 
+    desc: "水餃皮塗點番茄醬，鋪上火腿丁與起司絲，進烤箱烤5分鐘即可。", 
+    instructions: ["火腿切成小丁備用。", "將水餃皮排在烤盤上，表面塗上一層薄薄的番茄醬。", "均勻鋪上火腿丁，最後撒上滿滿的起司絲。", "放入烤箱 190°C 烘烤約 5 分鐘，看到起司融化微焦、水餃皮邊緣酥脆就完成了。"] 
+  },
+  { 
+    id: 5, name: "蔥花水餃皮煎餅", style: "premium", ingredients: ["水餃皮", "青蔥"], time: "6分鐘", 
+    desc: "水餃皮抹油撒蔥花，多層疊在一起壓扁再桿開，下鍋煎成蔥抓餅。", 
+    instructions: ["青蔥切成細蔥花，拌上一點點鹽與胡椒粉調味。", "拿一片水餃皮表面抹一層薄油、撒點蔥花，疊上第二片，重複動作疊 4-5 層。", "用擀麵棍將這疊水餃皮慢慢擀開、擀薄，變成一張大餅。", "下平底鍋用中小火兩面煎到金黃香脆，用鏟子往中間抓拍幾下會更有層次感！"] 
+  },
+  { 
+    id: 6, name: "黃金醬油仙貝", style: "minimalist", ingredients: ["冷飯"], time: "4分鐘", 
+    desc: "冷飯拌醬油壓成薄餅狀，用平底鍋煎到兩面微微焦脆。", 
+    instructions: ["將冷飯裝入塑膠袋中，加入一匙醬油，用手隔著袋子抓勻讓米飯均勻上色。", "將飯在袋子裡壓成薄薄的扁圓形餅狀（越薄越脆，像仙貝一樣）。", "熱平底鍋不放油（或刷極少油），將飯餅下鍋用中小火慢煎，兩面煎到水分收乾、帶有焦香味即可。"] 
+  },
+  { 
+    id: 7, name: "茶泡飯的逆襲", style: "minimalist", ingredients: ["冷飯", "青蔥"], time: "3分鐘", 
+    desc: "冷飯倒熱茶，把剩下一點點的肉鬆、海苔酥、芥末和蔥花丟進去。", 
+    instructions: ["將冷飯微波加熱，盛入碗中。", "在飯上鋪上冰箱剩的肉鬆、海苔酥或海苔絲，並撒上大把蔥花，擠上一點點芥末醬。", "泡一杯熱綠茶、烏龍茶或昆布高湯，從碗邊緩緩倒入至飯的七分滿即可享用。"] 
+  },
+  { 
+    id: 8, name: "微波番茄起司燉飯", style: "minimalist", ingredients: ["冷飯", "番茄", "起司"], time: "2分鐘", 
+    desc: "番茄切碎、冷飯、起司片放馬克杯，微波2分鐘搞定。", 
+    instructions: ["番茄洗淨切成小碎丁。", "在馬克杯中放入半碗冷飯、番茄丁，加入一小匙鹽、胡椒粉與一大匙水稍微拌勻。", "最上面鋪上一片起司片，放入微波爐大火微波 2 分鐘，拿出來拌勻就是濃郁燉飯！"] 
+  },
+  { 
+    id: 9, name: "剩麵脆脆餅", style: "minimalist", ingredients: ["麵條"], time: "5分鐘", 
+    desc: "剩下的熟麵條拌點胡椒鹽，壓平煎到兩面金黃變科學麵脆餅。", 
+    instructions: ["將剩餘的熟麵條稍微剪短，加入少許胡椒鹽或五香粉抓勻。", "平底鍋下少許油熱鍋，把麵條平鋪在鍋底，用鏟子用力壓扁、壓實成圓餅狀。", "用中小火慢煎，直到兩面都呈現金黃微焦、口感酥脆像科學麵一樣即可切塊。"] 
+  },
+  { 
+    id: 10, name: "砂糖吐司邊條", style: "minimalist", ingredients: ["吐司"], time: "5分鐘", 
+    desc: "吐司邊切條，下鍋用剩的奶油煎香，撒上大量砂糖。", 
+    instructions: ["把吃剩的吐司邊切成等長條狀。", "平底鍋下一塊奶油（一般食用油亦可）融化，放入吐司邊條用中小火不停翻炒。", "炒到吐司邊整體變得酥脆吸乾油分後熄火，趁熱撒上大量白砂糖拌勻即可。"] 
+  },
+  { 
+    id: 11, name: "海苔醬奶油燉飯", style: "premium", ingredients: ["冷飯"], time: "10分鐘", 
+    desc: "冷飯加牛奶、一匙海苔醬、奶油熬煮，假裝是法式黑松露燉飯。", 
+    instructions: ["熱小鍋，下一小塊奶油融化，倒入半碗牛奶與兩大匙水煮滾。", "加入冷飯，轉小火慢慢熬煮，邊煮邊用湯匙攪拌避免沾鍋。", "湯汁快收乾時，加入一滿匙黑海苔醬攪拌均勻，讓飯染成墨綠色，收汁黏稠後即完成這道「偽松露燉飯」。"] 
+  },
+  { 
+    id: 12, name: "法式焦糖吐司磚", style: "premium", ingredients: ["吐司", "雞蛋"], time: "10分鐘", 
+    desc: "吐司邊切塊，泡蛋液與牛奶，下鍋煎熟撒糖粉、薄荷葉。", 
+    instructions: ["吐司或吐司邊切成骰子方塊狀。雞蛋打散，加入少許牛奶與糖拌勻。", "將吐司塊放入蛋液中浸泡 3 分鐘，讓其充分吸收液體。", "平底鍋下油，將吐司磚各個面用中小火煎至金黃微焦，起鍋後撒上糖粉裝飾。"] 
+  },
+  { 
+    id: 13, name: "義式起司米燉可樂餅", style: "premium", ingredients: ["冷飯", "起司"], time: "15分鐘", 
+    desc: "冷飯拌起司絲揉成球，裹麵包粉（或碎洋芋片）炸至金黃。", 
+    instructions: ["冷飯加一點點鹽調味，挖一勺飯在手中壓扁，中間塞入起司絲，雙手揉捏成結實的飯球。", "如果家裡有洋芋片或科學麵，將其捏碎充當麵包粉。", "飯球表面沾上一層薄薄的水（或蛋液），裹上碎洋芋片，放入油鍋或氣炸鍋（190°C氣炸8分鐘）至外表酥脆。"] 
+  },
+  { 
+    id: 14, name: "日式什錦廣島燒", style: "premium", ingredients: ["麵條", "高麗菜", "雞蛋"], time: "12分鐘", 
+    desc: "剩麵條鋪底，蓋上高麗菜絲、蛋液，煎熟後擠上美乃滋、撒柴魚片。", 
+    instructions: ["高麗菜切成細絲。熟麵條下平底鍋下油炒熱，用鏟子壓成圓形圓餅狀打底。", "將高麗菜絲平鋪在麵條上。打一顆雞蛋拌勻，均勻淋在高麗菜與麵條表面。", "蓋上鍋蓋燜煎 3 分鐘，翻面再煎熟，起鍋後淋上醬油膏、美乃滋即完成。"] 
+  },
+  { 
+    id: 15, name: "起司起司三明治", style: "minimalist", ingredients: ["吐司", "起司"], time: "3分鐘", 
+    desc: "吐司夾入起司，進烤箱或平底鍋煎熱至起司融化。", 
+    instructions: ["拿兩片吐司，中間夾入兩片起司。", "平底鍋不用放油，用最弱的小火將吐司放上去，用鏟子一邊壓一邊煎。", "煎到一面金黃後翻面，直到兩面都酥脆、裡面的起司完全融化即可。"] 
+  },
+
+  // ==========================================
+  // 2. 高麗菜、洋蔥、番茄、青蔥蔬菜系列 (16-25)
+  // ==========================================
+  { 
+    id: 16, name: "暴怒手撕包菜", style: "minimalist", ingredients: ["高麗菜"], time: "5分鐘", 
+    desc: "高麗菜用手撕碎，蒜頭爆香，大火清炒加點醋，極度下飯。", 
+    instructions: ["高麗菜洗淨，用手瘋狂撕成不規則的小塊（手撕切面更容易吸附醬汁）。", "熱鍋下大火油，有蒜頭或辣椒可先爆香，倒入高麗菜大火狂炒 2 分鐘。", "起鍋前沿著鍋邊淋入一小匙白醋、少許鹽與醬油，快速翻炒三下即可起鍋。"] 
+  },
+  { 
+    id: 17, name: "微波味噌高麗菜", style: "minimalist", ingredients: ["高麗菜"], time: "3分鐘", 
+    desc: "高麗菜放碗裡，挖一匙味噌和水，蓋保鮮膜微波3分鐘。", 
+    instructions: ["高麗菜洗淨切片，放入可以微波的深碗中。", "拿一小碗，用一大匙熱水把一湯匙的味噌完全化開，淋在高麗菜上。", "蓋上微波專用蓋或保鮮膜（留個小缺口），大火微波 3 分鐘，取出後拌勻即可。"] 
+  },
+  { 
+    id: 18, name: "焦香洋蔥蛋花湯", style: "minimalist", ingredients: ["洋蔥", "雞蛋"], time: "5分鐘", 
+    desc: "洋蔥炒到焦黑（梅納反應），加水煮滾打個蛋花，鮮甜無比。", 
+    instructions: ["洋蔥切成薄絲，雞蛋打散備用。", "鍋下少許油，下洋蔥絲用中大火不斷翻炒，直到洋蔥邊緣呈現深褐色（炒出焦糖甜味）。", "倒入一大碗熱水煮滾，加鹽調味，最後大火淋入蛋液形成美麗蛋花即可關火。"] 
+  },
+  { 
+    id: 19, name: "清冰箱胡椒炒什錦", style: "minimalist", ingredients: ["洋蔥", "高麗菜", "番茄"], time: "5分鐘", 
+    desc: "管他什麼剩菜（洋蔥、高麗菜、番茄），全部切絲加大量黑胡椒爆炒。", 
+    instructions: ["把高麗菜、洋蔥、番茄通通切成條狀或絲狀。", "熱鍋下油，先下洋蔥絲炒香，接著丟入番茄與高麗菜大火翻炒。", "蔬菜炒軟後，撒入「開玩笑般大量」的黑胡椒粒與少許鹽，炒勻即是一道超棒的配菜。"] 
+  },
+  { 
+    id: 20, name: "生吐司風高麗菜沙拉", style: "minimalist", ingredients: ["高麗菜"], time: "5分鐘", 
+    desc: "高麗菜切極細絲，拌美乃滋、一點點鹽和糖，冰鎮後超解膩。", 
+    instructions: ["高麗菜切成極細的絲（越細口感越好），泡入冰水冰鎮 3 分鐘撈起瀝乾。", "將高麗菜絲裝碗，擠上適量美乃滋、撒上一小撮鹽與一小匙白糖。", "用筷子用力抓拌均勻，直到高麗菜微微變軟、帶有甜潤奶香即可。"] 
+  },
+  { 
+    id: 21, name: "法式洋蔥濃湯", style: "premium", ingredients: ["洋蔥", "吐司", "起司"], time: "45分鐘", 
+    desc: "洋蔥絲用小火慢炒到焦糖色，加高湯，放上一塊吐司和起司烤到融化。", 
+    instructions: ["洋蔥切極細絲。鍋中下大塊奶油，放入洋蔥絲，用小火展開長達 30 分鐘的慢炒，直到洋蔥縮成一小團深焦糖色泥狀。", "倒入水或高湯煮滾，加鹽、胡椒調整味道。", "盛入耐熱碗，上面飄浮一片切塊吐司，吐司上鋪滿起司絲，進烤箱 200°C 烤 5 分鐘至牽絲微焦。"] 
+  },
+  { 
+    id: 22, name: "千層高麗菜培根夾心", style: "premium", ingredients: ["高麗菜", "培根"], time: "20分鐘", 
+    desc: "高麗菜葉與剩肉片（或培根）一層層疊好放入鍋中，加高湯燉煮。", 
+    instructions: ["撕下完整的高麗菜大葉片洗淨。", "拿一個小鍋子，一層高麗菜葉、一層培根、再一層高麗菜葉疊上去，直到塞滿鍋子。", "注入半碗水或高湯，蓋上鍋蓋用中小火慢燉 15 分鐘，直到高麗菜完全軟爛，切開像蛋糕一樣享用。"] 
+  },
+  { 
+    id: 23, name: "日式蔬菜天婦羅餅", style: "premium", ingredients: ["洋蔥", "高麗菜"], time: "15分鐘", 
+    desc: "洋蔥、高麗菜切絲，拌麵糊下鍋炸成一塊塊酥脆天婦羅。", 
+    instructions: ["洋蔥與高麗菜切成粗絲。準備一個碗，用三大匙麵粉、一大匙太白粉和適量冰水調成濃稠麵糊。", "將蔬菜絲倒入麵糊中拌勻，讓蔬菜表面都沾有薄薄一層糊。", "用大湯匙挖一餅的分量，小心滑入 170°C 的油鍋中，炸至雙面金黃酥脆撈起瀝乾。"] 
+  },
+  { 
+    id: 24, name: "英式蔬菜牧羊人派", style: "premium", ingredients: ["洋蔥", "番茄"], time: "25分鐘", 
+    desc: "剩蔬菜切碎炒熟，上面鋪上一層厚厚的馬鈴薯泥，入烤箱烤到表面金黃。", 
+    instructions: ["洋蔥與番茄切成碎丁下鍋炒熟，加鹽和番茄醬炒成濃稠的蔬菜底，鋪在烤盤最下方。", "將家裡有的地瓜或馬鈴薯煮熟壓成泥，加入一點牛奶攪勻。", "把薯泥厚厚地鋪在蔬菜底上面，用湯匙刮出紋路，放入烤箱 200°C 烤 15 分鐘至表面微焦。"] 
+  },
+  { 
+    id: 25, name: "溫熱炙烤蔬菜佐油醋", style: "premium", ingredients: ["洋蔥", "番茄"], time: "10分鐘", 
+    desc: "大塊的洋蔥、番茄下鍋乾煎至微焦，淋上橄欖油與黑醋。", 
+    instructions: ["洋蔥切大厚片，番茄對半切開。", "平底鍋不下油，直接將洋蔥與番茄切面朝下，用中火乾煎至表面出現焦黑烤痕（香氣來源）。", "翻面再炙烤 2 分鐘，盛盤後大方淋上橄欖油、烏醋（或紅酒醋）與少許鹽巴。"] 
+  },
+
+  // ==========================================
+  // 3. 雞蛋、豆腐、培根、火腿、起司、火鍋料系列 (26-40)
+  // ==========================================
+  { 
+    id: 26, name: "起司歐姆蛋", style: "minimalist", ingredients: ["雞蛋", "起司"], time: "3分鐘", 
+    desc: "兩顆蛋打散下鍋，快熟時放入起司片折起來，爆漿香濃。", 
+    instructions: ["兩顆雞蛋打入碗中，加少許鹽巴打散均勻。", "熱鍋下一小塊奶油或一般食用油，倒入蛋液，用筷子快速畫圈攪拌至半熟蛋花狀。", "在蛋液中央放上一片起司，將蛋皮兩邊向中間折起包裹住起司，翻面再熱5秒即可起鍋。"] 
+  },
+  { 
+    id: 27, name: "小蔥拌豆腐", style: "minimalist", ingredients: ["豆腐", "青蔥"], time: "2分鐘", 
+    desc: "豆腐切塊，撒上大把蔥花，淋上醬油膏與香油即可食用。", 
+    instructions: ["將盒裝豆腐小心倒出裝盤，切成好入口的方塊狀，並倒掉多餘的水分。", "切大量蔥花，厚厚地撒在豆腐表面。", "淋上一大匙醬油膏（或蠔油）與幾滴香油，攪拌均勻即可享用，冰涼吃更開胃！"] 
+  },
+  { 
+    id: 28, name: "蔥花厚蛋燒", style: "minimalist", ingredients: ["雞蛋", "青蔥"], time: "5分鐘", 
+    desc: "蛋液加入大量蔥花與少許鹽，分次下鍋捲成蛋捲。", 
+    instructions: ["雞蛋打散，加入大量蔥花與一小撮鹽巴攪拌均勻。", "平底鍋熱油，先倒入三分之一的蛋液鋪滿鍋底，半熟時由外往內捲成一條，推到鍋邊。", "再倒入三分之一蛋液（要把剛剛的蛋捲掀起讓蛋液流過去連接），半熟時繼續包捲起來，重複直到蛋液用完，切塊上桌。"] 
+  },
+  { 
+    id: 29, name: "起司火腿豆腐煲", style: "premium", ingredients: ["豆腐", "火腿", "起司"], time: "8分鐘", 
+    desc: "豆腐鋪底，撒上火腿丁與起司片，微波或烤箱加熱至起司融化。", 
+    instructions: ["豆腐切厚片排在可以微波的深盤中，火腿切小丁備用。", "在豆腐上均勻撒上火腿丁，接著撕碎一至兩片起司鋪在最上層。", "蓋上微波蓋微波 2-3 分鐘，或放入烤箱 200°C 烤 8 分鐘，直到起司完全融化裹住豆腐。"] 
+  },
+  { 
+    id: 30, name: "培根炒蛋", style: "minimalist", ingredients: ["培根", "雞蛋"], time: "4分鐘", 
+    desc: "培根切條煸出油香，倒入蛋液快速翻炒至八分熟起鍋。", 
+    instructions: ["培根切成方便入口的小條狀，雞蛋打散備用。", "不用放油，直接把培根下鍋用中火煸炒，炒到表面微焦並逼出油香。", "倒入蛋液，快速用筷子或鏟子翻炒，讓蛋液吸收培根的油脂，炒至八分熟呈軟嫩狀態即可起鍋。"] 
+  },
+  { 
+    id: 31, name: "阿嬤的清冰箱蒸蛋", style: "minimalist", ingredients: ["雞蛋", "火鍋料", "青蔥"], time: "10分鐘", 
+    desc: "一包火鍋料切碎，丟進去跟雞蛋一起蒸，鮮甜方便。", 
+    instructions: ["火鍋丸子或蟹肉棒切成碎丁，青蔥切蔥花。", "兩顆雞蛋打散，加入蛋液體積兩倍的溫水（或高湯），加少許鹽攪勻並過濾掉泡沫。", "將火鍋料丁丟入蛋液中，放入電鍋，外鍋放一碗水，鍋蓋留一小縫，蒸至跳起後撒上蔥花。"] 
+  },
+  { 
+    id: 32, name: "皮蛋起司豆腐", style: "minimalist", ingredients: ["豆腐", "起司"], time: "2分鐘", 
+    desc: "豆腐蓋上起司稍微微波，拿出來拌醬油膏，意外的百搭。", 
+    instructions: ["盒裝豆腐切厚片擺盤。", "在每片豆腐上鋪上四分之一片起司片。", "放入微波爐大火微波 30 秒至起司微微融化，淋上醬油膏即可。"] 
+  },
+  { 
+    id: 33, name: "培根滑蛋飯", style: "minimalist", ingredients: ["培根", "雞蛋", "冷飯"], time: "5分鐘", 
+    desc: "培根碎炒香，倒入蛋液攪兩下半熟，直接蓋在飯上。", 
+    instructions: ["冷飯微波熱好裝碗。培根切碎，雞蛋打散拌入一匙水。", "平底鍋不下油，下培根碎炒到酥脆出油，直接倒入蛋液。", "用筷子快速劃圈 3 秒，趁蛋液還呈半熟流動狀時，立刻整鍋滑上熱飯。"] 
+  },
+  { 
+    id: 34, name: "醬油蔥花煎豆腐", style: "minimalist", ingredients: ["豆腐", "青蔥"], time: "5分鐘", 
+    desc: "豆腐切片煎到兩面黃，倒一大匙醬油膏和大量青蔥，收乾。", 
+    instructions: ["板豆腐或傳統豆腐切成厚片，用廚房紙巾吸乾水分。", "熱鍋下多點油，將豆腐下鍋用中火煎到兩面呈現金黃酥脆的硬殼。", "倒入一大匙醬油膏、三大匙水，並撒入滿滿的蔥花，大火收汁到醬汁濃稠即可。"] 
+  },
+  { 
+    id: 35, name: "日式柴魚揚出豆腐", style: "premium", ingredients: ["豆腐", "青蔥"], time: "10分鐘", 
+    desc: "豆腐裹太白粉炸到酥脆，泡在昆布醬油裡，撒上柴魚片與蘿蔔泥。", 
+    instructions: ["豆腐切大塊，表面均勻裹上一層太白粉（或地瓜粉），靜置1分鐘讓粉回潮。", "下高溫油鍋炸至外表變硬、微金黃撈出。", "盛盤後淋上淡醬油與少許糖調的汁，表面撒上蔥花（有柴魚片更好）。"] 
+  },
+  { 
+    id: 36, name: "西班牙烘蛋", style: "premium", ingredients: ["雞蛋", "洋蔥", "培根"], time: "15分鐘", 
+    desc: "冰箱剩的洋蔥、培根切丁炒熟，倒入大量蛋液，小火烘到兩面金黃熟透。", 
+    instructions: ["洋蔥、培根切成小丁。下鍋將兩者炒熟、炒香。", "打三顆雞蛋加鹽打散，將炒好的洋蔥培根直接倒入蛋液中拌勻。", "小平底鍋下一大匙油，倒入所有蛋液，用小火慢煎，蓋上鍋蓋燜到邊緣凝固，翻面再煎 2 分鐘至熟。"] 
+  },
+  { 
+    id: 37, name: "泰式女婿蛋", style: "premium", ingredients: ["雞蛋", "青蔥"], time: "12分鐘", 
+    desc: "水煮蛋拿去炸到外皮皺巴巴，淋上用檸檬汁、糖、醬油做的酸甜醬。", 
+    instructions: ["水煮蛋剝殼，擦乾水分。下油鍋大火油炸至外皮起泡、呈現金黃焦脆的「虎皮狀」撈出切半。", "用一匙醬油、一匙白糖、半顆檸檬汁（或白醋）在鍋中煮到黏稠成酸甜醬。", "將醬汁淋在炸蛋上，撒上蔥花即可。"] 
+  },
+  { 
+    id: 38, name: "義式番茄水波燉蛋", style: "premium", ingredients: ["番茄", "洋蔥", "雞蛋"], time: "15分鐘", 
+    desc: "番茄與洋蔥炒成濃醬，挖兩個洞打蛋進去，蓋鍋蓋悶至半熟。", 
+    instructions: ["洋蔥切碎、番茄切丁。下鍋將洋蔥炒香，丟入番茄丁與兩大匙番茄醬、半碗水熬煮成濃稠醬汁。", "用湯匙在醬汁中挖出兩個凹槽，分別打入一顆雞蛋。", "蓋上鍋蓋，用小火燜煮 4-5 分鐘，直到蛋白凝固、蛋黃仍呈半熟水波狀即可。"] 
+  },
+  { 
+    id: 39, name: "火鍋料起司串燒", style: "minimalist", ingredients: ["火鍋料", "起司"], time: "5分鐘", 
+    desc: "火鍋料煮熟用竹籤串起來，鋪上起司片烤到融化，宵夜良伴。", 
+    instructions: ["剩的火鍋丸子、甜不辣燙熟瀝乾，用竹籤串成串。", "放在鋪有烤紙的烤盤上，在丸子串表面蓋滿起司片。", "放入烤箱 200°C 烤 3 分鐘至起司融化微焦，灑點胡椒鹽即成烤串。"] 
+  },
+  { 
+    id: 40, name: "火腿炒高麗菜", style: "minimalist", ingredients: ["高麗菜", "火腿"], time: "5分鐘", 
+    desc: "火腿切片爆香，加入清甜的高麗菜大火快炒。", 
+    instructions: ["高麗菜撕小塊，火腿切片。", "熱鍋下一小匙油，先下火腿片炒到邊緣微焦香、逼出油脂。", "倒入高麗菜轉大火狂炒 1-2 分鐘，加少許鹽調味即可。"] 
+  },
+
+  // ==========================================
+  // 4. 萬能清冰箱醬料與泡麵深夜系列 (41-50)
+  // ==========================================
+  { 
+    id: 41, name: "咖哩烏龍拌麵", style: "minimalist", ingredients: ["咖哩", "麵條"], time: "5分鐘", 
+    desc: "昨晚剩的咖哩，加一點水稀釋，把熟麵條丟進去拌勻。", 
+    instructions: ["將昨晚剩的咖哩倒入鍋中，加入 3 大匙水稍微稀釋並煮滾。", "丟入煮熟的麵條或烏龍麵，轉中小火讓麵條攪拌翻炒 2 分鐘，吸附醬汁即可。"] 
+  },
+  { 
+    id: 42, name: "火鍋料炒沙茶", style: "minimalist", ingredients: ["火鍋料", "沙茶醬"], time: "5分鐘", 
+    desc: "剩的火鍋丸子、燕餃切片，加一匙沙茶醬大火爆炒，極度下飯。", 
+    instructions: ["火鍋丸子、貢丸切成薄片（較易入味）。", "熱鍋下少許油，下火鍋料大火翻炒 2 分鐘至微焦。", "加入一滿匙沙茶醬、一匙醬油與兩湯匙水，快速翻炒收乾大火起鍋。"] 
+  },
+  { 
+    id: 43, name: "沙拉醬烤火鍋料", style: "minimalist", ingredients: ["火鍋料"], time: "6分鐘", 
+    desc: "火鍋魚卵卷或蟹肉棒塗上滿滿美乃滋，進烤箱烤到表面微焦。", 
+    instructions: ["火鍋料（如蟹肉棒、竹輪、魚包蛋）解凍擦乾，排在烤盤上。", "在表面像拉花一樣擠上滿滿的美乃滋（台式甜美乃滋最對味）。", "放入烤箱 200°C 烤 5-6 分鐘，直到美乃滋表面呈現一格格焦黑珍珠狀，極香！"] 
+  },
+  { 
+    id: 44, name: "韓式辣醬炒豆腐", style: "minimalist", ingredients: ["韓式辣醬", "豆腐"], time: "7分鐘", 
+    desc: "一匙韓式辣醬與豆腐燜煮，甜辣開胃的清冰箱下飯菜。", 
+    instructions: ["豆腐切成方塊。拿一小碗，用兩大匙水將一湯匙韓式辣醬、半糖攪拌均勻。", "熱鍋下一匙油，豆腐下鍋稍微煎到兩面定型。", "倒入調好的辣醬汁，轉小火燜煮 3 分鐘讓豆腐入味，湯汁收乾即可。"] 
+  },
+  { 
+    id: 45, name: "維力炸醬炒飯", style: "minimalist", ingredients: ["維力炸醬", "冷飯"], time: "5分鐘", 
+    desc: "不要加鹽，直接挖一匙維力炸醬下清炒冷飯，香氣逼人。", 
+    instructions: ["熱平底鍋下一大匙油，倒入冷飯大火翻炒，用鏟子把米飯完全壓散。", "挖一滿匙維力炸醬（或XO醬、萬用肉燥醬）直接丟入飯中央。", "轉中火快速將炸醬與米飯翻炒均勻，直到每粒米都染上金黃醬色即可。"] 
+  },
+  { 
+    id: 46, name: "焗烤咖哩麵包盅", style: "premium", ingredients: ["咖哩", "吐司", "起司"], time: "12分鐘", 
+    desc: "吐司或麵包中間挖空，填入剩咖哩，撒滿起司絲進烤箱烤到牽絲。", 
+    instructions: ["厚片吐司或麵包中間用湯匙挖出一個凹槽（注意不要挖穿底部）。", "將熱好的賸餘濃稠咖哩填入麵包凹槽中。", "表面鋪上滿滿的起司絲，放入烤箱 200°C 烘烤 8 分鐘至起司表面金黃微焦。"] 
+  },
+  { 
+    id: 47, name: "起司牛奶泡麵", style: "minimalist", ingredients: ["泡麵", "起司"], time: "4分鐘", 
+    desc: "泡麵水量減少，加入半碗牛奶與一片起司，湯頭秒變濃郁。", 
+    instructions: ["鍋內放平常一半的水量，水滾後放入泡麵麵條與半包調味粉包煮軟。", "倒入半碗純牛奶，轉小火煮到微滾（注意火太大牛奶會起泡溢出）。", "熄火前在麵頂端放上一片起司，蓋上鍋蓋悶 30秒，讓起司融化在湯裡即可起鍋！"] 
+  },
+  { 
+    id: 48, name: "義式奶油培根泡麵", style: "premium", ingredients: ["泡麵", "培根", "起司"], time: "10分鐘", 
+    desc: "泡麵煮熟。培根炒香加牛奶、起司片煮融，把麵丟進去吸滿醬汁，起鍋打生蛋黃。", 
+    instructions: ["泡麵單獨煮至八分熟撈出瀝乾。培根切碎下鍋炒到出油香。", "往鍋中倒入半碗牛奶、一片起司片小火煮融，把煮好的泡麵丟進去拌炒收汁。", "盛盤後，在熱騰騰的麵中央打上一顆生蛋黃、撒上黑胡椒拌勻，高級感爆表！"] 
+  },
+  { 
+    id: 49, name: "避風塘炒泡麵", style: "premium", ingredients: ["泡麵", "青蔥"], time: "10分鐘", 
+    desc: "狂剁大量蒜碎和蔥花炸酥，加入煮好的泡麵和賸餘的調味包大火翻炒。", 
+    instructions: ["泡麵煮熟撈出瀝乾。切大量蒜碎與蔥花。", "熱鍋下多點油，下蒜碎與蔥花用小火炸到金黃酥脆（像蒜酥一樣）。", "倒入泡麵，轉大火，加入半包泡麵粉包，瘋狂翻炒至乾身、香氣四溢。"] 
+  },
+  { 
+    id: 50, name: "廣式兩面黃脆麵", style: "premium", ingredients: ["泡麵", "高麗菜", "培根"], time: "12分鐘", 
+    desc: "泡麵煮好壓成圓餅狀煎到雙面酥脆，上面淋上蔬菜炒肉片的燴料芡汁。", 
+    instructions: ["泡麵煮熟撈出拌一點點油。下平底鍋壓成圓餅狀，用中小火兩面慢煎至極度金黃乾脆，盛盤底。", "另外起鍋下油炒香培根與高麗菜，加半碗水與醬油煮滾，用太白粉水勾厚芡。", "將這鍋滾燙稠密的培根高麗菜芡汁，劈頭蓋臉地淋在脆麵上，滋滋作響即可享用！"] 
+  }
+];
+
+const SIGNATURE_IDS = [2, 4, 26, 33, 46, 50]; // 精選招牌料理（未勾選時顯示）
+
+let selectedIngredients = new Set();
+let currentTab = "minimalist";
+let filteredRecipes = [];
+
+const ingredientGroupsEl = document.getElementById("ingredientGroups");
+const recipeGridEl = document.getElementById("recipeGrid");
+const recipeSectionTitleEl = document.getElementById("recipeSectionTitle");
+const tabBarEl = document.getElementById("tabBar");
+const tabMinimalistEl = document.getElementById("tabMinimalist");
+const tabPremiumEl = document.getElementById("tabPremium");
+const emptyStateEl = document.getElementById("emptyState");
+const magicBtn = document.getElementById("magicBtn");
+const slotOverlay = document.getElementById("slotOverlay");
+const selectedCountEl = document.getElementById("selectedCount");
+const clearBtn = document.getElementById("clearBtn");
+
+/* ===================== 渲染食材勾選區 ===================== */
+function renderIngredientGroups(){
+  ingredientGroupsEl.innerHTML = ingredientGroupsData.map((group, gIdx) => `
+    <div>
+      <h3 class="font-display font-bold text-base sm:text-lg mb-3 category-pill inline-block pb-1" style="color:var(--food-yellow); border-color: var(--food-yellow);">
+        ${group.title}
+      </h3>
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+        ${group.items.map((item, iIdx) => `
+          <label class="relative cursor-pointer block">
+            <input type="checkbox" class="hidden ingredient-checkbox" data-name="${item}" id="ing-${gIdx}-${iIdx}" />
+            <div class="ingredient-card rounded-2xl bg-gray-50 border-2 border-gray-100 p-3 flex flex-col items-center gap-1 text-center">
+              <span class="ing-emoji text-2xl">${group.emojiMap[item] || "🍴"}</span>
+              <span class="font-bold text-sm">${item}</span>
+            </div>
+          </label>
+        `).join("")}
+      </div>
+    </div>
+  `).join("");
+
+  document.querySelectorAll(".ingredient-checkbox").forEach(cb => {
+    cb.addEventListener("change", (e) => {
+      const name = e.target.dataset.name;
+      if (e.target.checked) selectedIngredients.add(name);
+      else selectedIngredients.delete(name);
+      selectedCountEl.textContent = `目前選了 ${selectedIngredients.size} 種食材`;
+    });
+  });
+}
+
+clearBtn.addEventListener("click", () => {
+  selectedIngredients.clear();
+  document.querySelectorAll(".ingredient-checkbox").forEach(cb => cb.checked = false);
+  selectedCountEl.textContent = `目前選了 0 種食材`;
+});
+
+/* ===================== 食譜卡片渲染 ===================== */
+function recipeCardHTML(r, idx){
+  const styleBadge = r.style === "minimalist"
+    ? `<span class="text-xs font-bold px-2 py-1 rounded-full bg-gray-900 text-white">地獄極簡風 ⚡️</span>`
+    : `<span class="text-xs font-bold px-2 py-1 rounded-full" style="background: var(--food-yellow); color:#3b2a06;">偽高級餐廳風 👑</span>`;
+
+  // 「食材全滿 / 缺料」標籤 —— 只有篩選結果（有 missingIngredients 屬性）才會顯示
+  let statusBadge = "";
+  if (r.missingIngredients !== undefined){
+    statusBadge = r.isPerfect
+      ? `<span class="text-xs font-bold px-2 py-1 rounded-full bg-green-500 text-white">🎯 食材全滿</span>`
+      : `<span class="text-xs font-bold px-2 py-1 rounded-full bg-gray-100 text-gray-600">缺：${r.missingIngredients.join("、")}</span>`;
+  }
+
+  return `
+    <div class="recipe-card bg-white rounded-2xl shadow-md p-5 border border-gray-100 cursor-pointer" style="animation-delay:${idx * 0.05}s" onclick="openRecipeModal(${r.id})">
+      <div class="flex items-start justify-between gap-2 mb-2 flex-wrap">
+        <h3 class="font-display font-bold text-lg leading-snug" style="color:var(--magic-purple-dark);">${r.name}</h3>
+        <div class="flex flex-wrap gap-1 justify-end">
+          ${styleBadge}
+          ${statusBadge}
+        </div>
+      </div>
+      <p class="text-sm text-gray-600 mb-3">${r.desc}</p>
+      <div class="flex items-center justify-between text-xs text-gray-400 font-semibold">
+        <span>⏱ ${r.time}</span>
+        <span class="truncate max-w-[60%] text-right">${r.ingredients.join(" · ")}</span>
+      </div>
+      <div class="mt-3 pt-3 border-t border-gray-100 text-xs font-bold text-right" style="color:var(--magic-purple);">點擊看魔法步驟 ➔</div>
+    </div>
+  `;
+}
+
+function renderSignatureRecipes(){
+  recipeSectionTitleEl.textContent = "✨ 主廚精選招牌料理";
+  tabBarEl.classList.add("hidden");
+  emptyStateEl.classList.add("hidden");
+  const sigRecipes = SIGNATURE_IDS.map(id => recipes.find(r => r.id === id));
+  recipeGridEl.innerHTML = sigRecipes.map((r, i) => recipeCardHTML(r, i)).join("");
+}
+
+/* 核心篩選邏輯：OR 比對（命中至少 1 樣食材即列入）＋ 命中數排序 ＋ 缺料標示 */
+function renderFilteredRecipes(){
+  recipeSectionTitleEl.textContent = "🎉 符合條件的食譜";
+  tabBarEl.classList.remove("hidden");
+  updateTabUI();
+
+  const have = selectedIngredients; // Set，目前勾選的食材
+
+  let matched = recipes.map(recipe => {
+    const hasIngredients = recipe.ingredients.filter(ing => have.has(ing));
+    const missingIngredients = recipe.ingredients.filter(ing => !have.has(ing));
+    return {
+      ...recipe,
+      matchCount: hasIngredients.length,
+      missingIngredients,
+      isPerfect: missingIngredients.length === 0,
+    };
+  });
+
+  // 只要命中 1 個以上食材就留下（OR 邏輯，取代原本要求全中的 AND 邏輯）
+  matched = matched.filter(r => r.matchCount > 0);
+
+  // 完美匹配排最前，其餘依命中數量多寡排序
+  matched.sort((a, b) => {
+    if (a.isPerfect && !b.isPerfect) return -1;
+    if (!a.isPerfect && b.isPerfect) return 1;
+    return b.matchCount - a.matchCount;
+  });
+
+  filteredRecipes = matched;
+  renderRecipesForTab();
+}
+
+function renderRecipesForTab(){
+  const list = filteredRecipes.filter(r => r.style === currentTab);
+  if (list.length === 0){
+    recipeGridEl.innerHTML = "";
+    emptyStateEl.classList.remove("hidden");
+  } else {
+    emptyStateEl.classList.add("hidden");
+    recipeGridEl.innerHTML = list.map((r, i) => recipeCardHTML(r, i)).join("");
+  }
+}
+
+function updateTabUI(){
+  tabMinimalistEl.classList.remove("active-minimalist");
+  tabPremiumEl.classList.remove("active-premium");
+  if (currentTab === "minimalist") tabMinimalistEl.classList.add("active-minimalist");
+  else tabPremiumEl.classList.add("active-premium");
+}
+
+tabMinimalistEl.addEventListener("click", () => { currentTab = "minimalist"; updateTabUI(); renderRecipesForTab(); });
+tabPremiumEl.addEventListener("click", () => { currentTab = "premium"; updateTabUI(); renderRecipesForTab(); });
+
+/* ===================== 施展魔法按鈕 ===================== */
+function spawnSparkles(){
+  const rect = magicBtn.getBoundingClientRect();
+  const emojis = ["✨","🌟","⭐","💫"];
+  for (let i = 0; i < 8; i++){
+    const s = document.createElement("span");
+    s.className = "sparkle";
+    s.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    s.style.left = (rect.left + rect.width/2 + (Math.random()*120 - 60)) + "px";
+    s.style.top = (rect.top + window.scrollY + (Math.random()*20 - 10)) + "px";
+    document.body.appendChild(s);
+    setTimeout(() => s.remove(), 1300);
+  }
+}
+
+magicBtn.addEventListener("click", () => {
+  if (magicBtn.classList.contains("shaking")) return;
+  magicBtn.classList.add("shaking");
+  slotOverlay.classList.remove("hidden");
+  spawnSparkles();
+
+  setTimeout(() => {
+    magicBtn.classList.remove("shaking");
+    slotOverlay.classList.add("hidden");
+
+    if (selectedIngredients.size === 0){
+      renderSignatureRecipes();
+    } else {
+      currentTab = "minimalist";
+      renderFilteredRecipes();
+      if (filteredRecipes.filter(r => r.style === "minimalist").length === 0 &&
+          filteredRecipes.filter(r => r.style === "premium").length > 0){
+        currentTab = "premium";
+        updateTabUI();
+        renderRecipesForTab();
+      }
+    }
+    document.getElementById("recipeSectionTitle").scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 1400);
+});
+
+/* ===================== 彈窗（Modal）控制 ===================== */
+function openRecipeModal(recipeId) {
+  const recipe = recipes.find(r => r.id === recipeId);
+  if (!recipe) return;
+
+  // 填入彈窗標題與時間
+  document.getElementById('modal-title').textContent = recipe.name;
+  document.getElementById('modal-time').textContent = '⏱ ' + recipe.time;
+
+  // 填入食材標籤
+  document.getElementById('modal-ingredients').innerHTML = recipe.ingredients
+    .map(ing => `<span class="inline-block bg-indigo-50 text-indigo-600 font-bold text-xs px-3 py-1 rounded-full border border-indigo-200">${ing}</span>`)
+    .join('');
+
+  // 填入步驟
+  if (recipe.instructions && recipe.instructions.length > 0) {
+    document.getElementById('modal-steps').innerHTML = recipe.instructions.map((step, index) => `
+      <li class="flex items-start gap-3">
+        <span class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold text-white" style="background:var(--magic-purple);">${index + 1}</span>
+        <p class="text-sm text-gray-600 leading-relaxed pt-0.5">${step}</p>
+      </li>
+    `).join('');
+  } else {
+    document.getElementById('modal-steps').innerHTML = `
+      <li class="text-sm text-gray-500 italic">詳細步驟即將加入，敬請期待！</li>
+    `;
+  }
+
+  // 顯示彈窗
+  const modal = document.getElementById('recipe-modal');
+  modal.classList.remove('hidden');
+  // 防止背景捲動
+  document.body.style.overflow = 'hidden';
+}
+
+function closeRecipeModal() {
+  document.getElementById('recipe-modal').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+/* ===================== 初始化 ===================== */
+renderIngredientGroups();
+renderSignatureRecipes();
+</script>
+<!-- ===================== 彈窗 Modal ===================== -->
+<div id="recipe-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(30,27,58,0.55); backdrop-filter: blur(4px);">
+  <!-- 點擊背景關閉 -->
+  <div class="absolute inset-0" onclick="closeRecipeModal()"></div>
+
+  <!-- 彈窗本體 -->
+  <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto flex flex-col" style="animation: rise .3s ease forwards;">
+
+    <!-- 彈窗頂部紫色 Banner -->
+    <div class="rounded-t-3xl px-6 pt-6 pb-5 text-white flex-shrink-0" style="background: linear-gradient(120deg, var(--magic-purple-dark), var(--magic-purple) 60%, #8385f5);">
+      <div class="flex justify-between items-start gap-3">
+        <div>
+          <p class="text-xs font-bold opacity-75 mb-1">🪄 魔法步驟解鎖！</p>
+          <h2 id="modal-title" class="font-display font-extrabold text-xl sm:text-2xl leading-snug"></h2>
+          <p id="modal-time" class="text-sm mt-1 opacity-80 font-semibold"></p>
+        </div>
+        <button onclick="closeRecipeModal()" class="flex-shrink-0 w-8 h-8 rounded-full bg-white bg-opacity-20 hover:bg-opacity-40 transition flex items-center justify-center text-white font-bold text-lg leading-none">✕</button>
+      </div>
+    </div>
+
+    <!-- 彈窗內容 -->
+    <div class="px-6 py-5 space-y-5">
+
+      <!-- 所需食材 -->
+      <div>
+        <h3 class="font-display font-bold text-sm mb-2" style="color:var(--magic-purple-dark);">🧺 所需食材</h3>
+        <div id="modal-ingredients" class="flex flex-wrap gap-2"></div>
+      </div>
+
+      <!-- 分隔線 -->
+      <hr class="border-gray-100" />
+
+      <!-- 詳細步驟 -->
+      <div>
+        <h3 class="font-display font-bold text-sm mb-3" style="color:var(--magic-purple-dark);">📋 詳細步驟</h3>
+        <ul id="modal-steps" class="space-y-4"></ul>
+      </div>
+
+    </div>
+
+    <!-- 底部按鈕 -->
+    <div class="px-6 pb-6 flex-shrink-0">
+      <button onclick="closeRecipeModal()" class="w-full py-3 rounded-2xl font-display font-bold text-white text-base transition" style="background: linear-gradient(135deg, var(--magic-purple), #8385f5);">
+        收起魔法 🪄
+      </button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
